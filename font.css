@@ -5,7 +5,7 @@
 /* 1. 載入字型檔 (請確保 unifont.ttf 放在同一個資料夾) */
 @font-face {
   font-family: 'Unifont';
-  src: url('./unifont.ttf') format('truetype');
+  src: url('./Unifont.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
