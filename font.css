@@ -1,8 +1,8 @@
 /* =========================================
-   font.css - GNU Unifont 像素字型核心設定
+   font.css - GNU Unifont 像素字體核心設定
    ========================================= */
 
-/* 1. 載入字型檔 (請確保 unifont.ttf 放在同一個資料夾) */
+/* 1. 載入字體檔 */
 @font-face {
   font-family: 'Unifont';
   src: url('./unifont.ttf') format('truetype');
@@ -10,7 +10,7 @@
   font-style: normal;
 }
 
-/* 2. 強制全站套用像素字型，並關閉字體平滑以維持銳利度 */
+/* 2. 強制全站套用像素字體 */
 body, input, button, #terminal, .status, .title {
   font-family: 'Unifont', monospace !important;
   font-size: 16px;
