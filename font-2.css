@@ -1,0 +1,13 @@
+@font-face {
+  font-family: 'Mojangles';
+  src: url('./unifont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body, input, button, #terminal, .status, .title {
+  font-family: 'Mojangles', monospace !important;
+  font-size: 16px;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
