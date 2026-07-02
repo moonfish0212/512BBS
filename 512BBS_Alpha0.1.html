@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>512BBS—與朋友一起開槓！</title>
   
-  <!-- 【新增這一行】告訴網頁要去讀取字型設定檔 -->
-  <link rel="stylesheet" href="./font.css">
-
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
 
@@ -78,14 +75,10 @@
   </style>
 </head>
 <body>
-
-  <div id="loading-screen">
-    <div class="spinner"></div>
-    <div id="loading-tip" style="color: #00d2ff; font-family: monospace;">Loading...</div>
-  </div>
+<div id="loading-tip" style="color: #00d2ff;">Loading...</div>
 
   <div class="header">
-    <span class="title">512BBS/Alpha 0.1-0624</span>
+    <span class="title">512BBS/Alpha 0.1-0702-hotfix</span>
     <span class="status">在線人數: <span id="online-count" style="color:#fff;">0</span></span>
   </div>
 
@@ -116,8 +109,8 @@
   const db = getDatabase(app);
   const auth = getAuth(app);
 
-  const tips = ["Firebase Realtime 是即時同步的！", "你知道嗎：現在刷新網頁帳號不會不見了！", "月球魚旗下有多款應用程式（雖然都是一些很沒用的XD"];
-  document.getElementById('loading-tip').innerText = "你知道嗎" + tips[Math.floor(Math.random() * tips.length)];
+  const tips = ["Firebase Realtime 是即時同步的！", "現在刷新網頁帳號不會不見了！", "月球魚旗下有多款應用程式"];
+  document.getElementById('loading-tip').innerText = "你知道嗎：" + tips[Math.floor(Math.random() * tips.length)];
   setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 1500);
 
   const outputLog = document.getElementById('output-log');
