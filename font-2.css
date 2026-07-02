@@ -6,7 +6,7 @@
 }
 
 body, input, button, #terminal, .status, .title {
-  font-family: 'Mojangles', monospace !important;
+  font-family: 'Mojangles', Notosans-TC !important;
   font-size: 16px;
   -webkit-font-smoothing: none;
   font-smooth: never;
