@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>512BBS—與朋友一起開槓！</title>
+  
+  <link rel="stylesheet" href="./font-tt.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+
+  <style>
+    /* 華碩 UEFI 風格 UI */
+    body { 
+      background-color: #0d1117; /* 深灰藍底色 */
+      color: #c9d1d9; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      padding: 20px; 
+      margin: 0; 
+      font-size: 15px; 
+    }
+    .header {
+      background: linear-gradient(90deg, #013e4a 0%, #0d1117 100%);
+      border-bottom: 2px solid #00d2ff; /* 華碩標誌性青色 */
+      padding: 10px 15px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 4px 4px 0 0;
+    }
+    .title { color: #ffffff; font-size: 18px; letter-spacing: 1px; }
+    .status { color: #00d2ff; font-family: monospace; }
+    
+    #loading-screen { position: fixed; inset: 0; background: #0d1117; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+    .spinner { border: 4px solid #1f2937; border-top: 4px solid #00d2ff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    #terminal { 
+      background-color: #010409; 
+      border: 1px solid #30363d; 
+      border-left: 3px solid #00d2ff;
+      padding: 15px; 
+      height: 400px; 
+      overflow-y: auto; 
+      white-space: pre-wrap; 
+      font-family: 'Courier New', Courier, monospace; /* 終端機保持等寬字型 */
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .green { color: #56d364; } /* 柔和的綠色 */
+    .yellow { color: #e3b341; } /* 柔和的黃色 */
+    .cyan { color: #00d2ff; }
+    .red { color: #f85149; }
+    
+    form { 
+      display: flex; 
+      margin-top: 15px; 
+      background: #161b22; 
+      padding: 10px; 
+      border: 1px solid #30363d;
+      border-radius: 4px;
+    }
+    input { 
+      background: transparent; 
+      border: none; 
+      color: #00d2ff; 
+      font-family: monospace; 
+      font-size: 16px; 
+      outline: none; 
+      flex-grow: 1; 
+      margin-left: 10px;
+    }
+    input::placeholder { color: #484f58; }
+  </style>
+</head>
+<body>   <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-tip" style="color: #00d2ff;">Loading...</div>
+  </div>
+
+  <div class="header">
+    <span class="title">512BBS/Alpha 0.1-0702-hotfix</span>
+    <span class="status">在線人數: <span id="online-count" style="color:#fff;">0</span></span>
+  </div>
+
+  <div id="terminal"><div id="output-log"></div></div>
+  
+  <form id="bbs-form">
+    <span class="cyan">512BBS:</span>
+    <input type="text" id="command-input" placeholder="請輸入使用者名稱" autocomplete="off" autofocus>
+  </form>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getDatabase, ref, set, push, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+  // 請確認這裡的 Config 是您原本正確的設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyAfx59QrTkSfIo36knGTGoYuY_YaRNlR0k",
+    authDomain: "bbs-512.firebaseapp.com",
+    databaseURL: "https://bbs-512-default-rtdb.firebaseio.com",
+    projectId: "bbs-512",
+    storageBucket: "bbs-512.firebasestorage.app",
+    messagingSenderId: "289704525982",
+    appId: "1:289704525982:web:f541fe7d7604243ded3b8f"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  const tips = ["Firebase Realtime 是即時同步的！", "現在刷新網頁帳號不會不見了！", "月球魚旗下有多款應用程式"];
+  document.getElementById('loading-tip').innerText = "你知道嗎：" + tips[Math.floor(Math.random() * tips.length)];
+  setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 1500);
+
+  const outputLog = document.getElementById('output-log');
+  const commandInput = document.getElementById('command-input');
+  
+  // 【修復核心】從瀏覽器的 Session 中讀取帳號
+  let myUsername = sessionStorage.getItem('bbs_username') || '';
+  let isListeningChat = false;
+
+  function print(text, className = '') {
+    // 簡易的 XSS 防護：把 < 和 > 替換掉，防止有人輸入網頁語法破壞版面
+    const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const div = document.createElement('div');
+    if (className) div.className = className;
+    div.innerHTML = safeText; // 使用 innerHTML 是因為上面已經替換成安全符號
+    outputLog.appendChild(div);
+    document.getElementById('terminal').scrollTop = outputLog.scrollHeight;
+  }
+
+  function registerOnlineStatus() {
+    const userRef = ref(db, `online_users/${myUsername}`);
+    set(userRef, { active: true, time: serverTimestamp() });
+    onDisconnect(userRef).remove();
+  }
+
+  function listenToChat() {
+    if (isListeningChat) return;
+    isListeningChat = true;
+    onValue(ref(db, 'global_messages'), (snap) => {
+      outputLog.innerHTML = '';
+      if (snap.exists()) {
+        Object.values(snap.val()).forEach(m => print(`[${m.username}]: ${m.text}`));
+      }
+    });
+  }
+
+  // 系統啟動流程
+  signInAnonymously(auth).then(() => {
+    // 檢查是否有記憶的帳號
+    if (myUsername) {
+      print(`[System Restore] 歡迎回來，已恢復連線身分: ${myUsername}`, "cyan");
+      commandInput.placeholder = "輸入訊息...";
+      registerOnlineStatus();
+      listenToChat();
+    } else {
+      print("⚠︎系統已就緒，歡迎使用", "yellow");
+    }
+    
+    onValue(ref(db, 'announcements'), (snap) => {
+      if (snap.exists()) print(`【系統公告】: ${snap.val().text}`, "green");
+    });
+  });
+
+  onValue(ref(db, 'online_users'), (snap) => {
+    document.getElementById('online-count').innerText = snap.exists() ? Object.keys(snap.val()).length : '0';
+  });
+
+  document.getElementById('bbs-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const val = commandInput.value.trim();
+    if (!val) return;
+
+    if (!myUsername) {
+      myUsername = val;
+      // 【修復核心】將帳號存入瀏覽器 Session
+      sessionStorage.setItem('bbs_username', myUsername);
+      
+      print(`登入成功: ${myUsername}`, "cyan");
+      registerOnlineStatus();
+      listenToChat();
+      commandInput.placeholder = "輸入訊息...";
+    } else {
+      push(ref(db, 'global_messages'), { username: myUsername, text: val, time: serverTimestamp() });
+    }
+    commandInput.value = '';
+  });
+</script>
+</body>
+  </html>
